@@ -1,37 +1,25 @@
-// App.jsx
-import { useState, useCallback, useMemo } from "react";
+// App.jsx — Marquee UI shell, wires all 4 tools together
+// Tools are proper React components. App uses refs/context to get their code output.
+import { useState, useCallback } from "react";
 import { PRESETS } from "./shared/constants";
 import CodePanel from "./shared/CodePanel";
 
-// ── Logo Marquee ──────────────────────────────────────────────────────────────
-import {
-  LogoPanel,
-  LogoPreview,
-  LogoCodePanel,
-} from "./tools/LogoMarquee/index";
-
-// ── Text Marquee ──────────────────────────────────────────────────────────────
-import {
-  TextPanel,
-  TextPreview,
-  TextCodePanel,
-} from "./tools/TextMarquee/index";
-
-// ── FAQ + Testimonials (default export pattern: { Sidebar, Preview }) ─────────
+// ── Tool components ───────────────────────────────────────────────────────────
+import { UseLogoMarquee } from "./tools/LogoMarquee/useLogoMarquee";
+import { UseTextMarquee } from "./tools/TextMarquee/useTextMarquee";
+import { LogoPanel, LogoPreview, LogoCodePanel } from "./tools/LogoMarquee/index";
+import { TextPanel, TextPreview, TextCodePanel } from "./tools/TextMarquee/index";
 import FAQ from "./tools/FAQ/index";
 import Testimonials from "./tools/Testimonials/index";
 
-// ─── Hooks ────────────────────────────────────────────────────────────────────
-import { useLogoMarquee } from "./tools/LogoMarquee/useLogoMarquee";
-import { useTextMarquee } from "./tools/TextMarquee/useTextMarquee";
-
 const MODES = [
   { id: "logo", label: "🖼 Logo Marquee" },
-  { id: "text", label: "📝 Text Marquee" },
+  { id: "text", label: "T  Text Marquee" },
   { id: "faq", label: "❓ FAQ" },
   { id: "testimonial", label: "💬 Testimonials" },
 ];
 
+// Sidebar tabs per mode
 const SIDE_TABS = {
   logo: [{ id: "configure", label: "Configure" }],
   text: [{ id: "configure", label: "Configure" }],
@@ -55,59 +43,26 @@ export default function App() {
   const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // ── Logo state ──────────────────────────────────────────────────────────────
-  const {
-    logos,
-    logoSettings,
-    logoCode,
-    set: setL,
-    addLogo,
-    removeLogo,
-    renameLogo,
-    supabaseUrl,
-    supabaseAnonKey,
-    bpVal,
-  } = useLogoMarquee();
-
-  // ── Text state ──────────────────────────────────────────────────────────────
-  const { textSettings, textCode, set: setT, setBp: setBpT } = useTextMarquee();
-
-  // ── FAQ + Testimonials lift code up via onCodeChange ────────────────────────
-  const [faqCode, setFaqCode] = useState({
-    custom: "",
-    css: "",
-    html: "",
-    js: "",
-  });
-  const [testiCode, setTestiCode] = useState({
-    custom: "",
-    css: "",
-    html: "",
-    js: "",
-  });
-
-  // ── Active code for copy button ─────────────────────────────────────────────
-  const activeCode = useMemo(() => {
-    if (mode === "logo") return { custom: logoCode };
-    if (mode === "text") return { custom: textCode };
-    if (mode === "faq") return faqCode;
-    if (mode === "testimonial") return testiCode;
-    return { custom: "" };
-  }, [mode, logoCode, textCode, faqCode, testiCode]);
+  // Code is lifted up from whichever tool is active
+  const [code, setCode] = useState({ custom: "", css: "", html: "", js: "" });
 
   const switchMode = (m) => {
     setMode(m);
     setSideTab(SIDE_TABS[m][0].id);
+    setCode({ custom: "", css: "", html: "", js: "" });
   };
 
   const copyCode = useCallback(() => {
-    const content = activeCode?.custom || "";
+    const content = code?.custom || "";
     navigator.clipboard.writeText(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
-  }, [activeCode]);
+  }, [code]);
 
   const tabs = SIDE_TABS[mode];
+
+  // Shared props every tool receives
+  const toolProps = { platform, sideTab, onCodeChange: setCode };
 
   return (
     <div
@@ -358,45 +313,12 @@ export default function App() {
               ))}
             </div>
           )}
-
+          {/* Tool sidebar panels rendered here via the active tool's SidebarSlot */}
           <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
-            {mode === "logo" && (
-              <LogoPanel
-                logos={logos}
-                settings={logoSettings}
-                set={setL}
-                addLogo={addLogo}
-                removeLogo={removeLogo}
-                renameLogo={renameLogo}
-                code={logoCode}
-                tab={sideTab}
-                supabaseUrl={supabaseUrl}
-                supabaseAnonKey={supabaseAnonKey}
-              />
-            )}
-            {mode === "text" && (
-              <TextPanel
-                settings={textSettings}
-                set={setT}
-                setBp={setBpT}
-                code={textCode}
-                tab={sideTab}
-              />
-            )}
-            {mode === "faq" && (
-              <FAQ.Sidebar
-                platform={platform}
-                sideTab={sideTab}
-                onCodeChange={setFaqCode}
-              />
-            )}
-            {mode === "testimonial" && (
-              <Testimonials.Sidebar
-                platform={platform}
-                sideTab={sideTab}
-                onCodeChange={setTestiCode}
-              />
-            )}
+            {mode === "logo" && <LogoMarquee.Sidebar {...toolProps} />}
+            {mode === "text" && <TextMarquee.Sidebar {...toolProps} />}
+            {mode === "faq" && <FAQ.Sidebar {...toolProps} />}
+            {mode === "testimonial" && <Testimonials.Sidebar {...toolProps} />}
           </div>
         </div>
 
@@ -456,36 +378,16 @@ export default function App() {
               </span>
             </div>
             <div style={{ padding: 24 }}>
-              {mode === "logo" && (
-                <LogoPreview
-                  logos={logos}
-                  settings={{
-                    ...logoSettings,
-                    logoHeight: bpVal("logoHeight"),
-                    logoSpacing: bpVal("logoSpacing"),
-                    speed: bpVal("speed"),
-                  }}
-                />
-              )}
-              {mode === "text" && <TextPreview settings={textSettings} />}
-              {mode === "faq" && (
-                <FAQ.Preview
-                  platform={platform}
-                  sideTab={sideTab}
-                  onCodeChange={setFaqCode}
-                />
-              )}
+              {mode === "logo" && <LogoMarquee.Preview {...toolProps} />}
+              {mode === "text" && <TextMarquee.Preview {...toolProps} />}
+              {mode === "faq" && <FAQ.Preview {...toolProps} />}
               {mode === "testimonial" && (
-                <Testimonials.Preview
-                  platform={platform}
-                  sideTab={sideTab}
-                  onCodeChange={setTestiCode}
-                />
+                <Testimonials.Preview {...toolProps} />
               )}
             </div>
           </div>
 
-          {/* Inline code card */}
+          {/* Inline code card (when right panel is hidden) */}
           {!showCode && (
             <div
               style={{
@@ -514,7 +416,7 @@ export default function App() {
                 </span>
               </div>
               <div style={{ padding: "16px 20px 20px" }}>
-                {/* <button
+                <button
                   onClick={copyCode}
                   style={{
                     width: "100%",
@@ -532,56 +434,41 @@ export default function App() {
                   }}
                 >
                   {copied ? "✓ Copied! Paste into Unbounce" : "Copy Code"}
-                </button>  */}
-
-                {mode === "logo" && (
-                  <LogoCodePanel
-                    code={logoCode}
-                    logos={logos}
-                    settings={logoSettings}
-                  />
-                )}
-
-                {mode === "text" && (
-                  <TextCodePanel code={textCode} settings={textSettings} />
-                )}
-
-                {(mode === "faq" || mode === "testimonial") && (
-                  <div
+                </button>
+                <div
+                  style={{
+                    background: "#faf9f7",
+                    border: "1px solid #e8e5de",
+                    borderRadius: 9,
+                    padding: "12px 14px",
+                    maxHeight: 200,
+                    overflowY: "auto",
+                  }}
+                >
+                  <pre
                     style={{
-                      background: "#faf9f7",
-                      border: "1px solid #e8e5de",
-                      borderRadius: 9,
-                      padding: "12px 14px",
-                      maxHeight: 200,
-                      overflowY: "auto",
+                      margin: 0,
+                      fontSize: 11,
+                      lineHeight: 1.7,
+                      color: "#666",
+                      fontFamily: "'Fira Code','Courier New',monospace",
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
                     }}
                   >
-                    <pre
-                      style={{
-                        margin: 0,
-                        fontSize: 11,
-                        lineHeight: 1.7,
-                        color: "#666",
-                        fontFamily: "'Fira Code','Courier New',monospace",
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {(
-                        activeCode?.custom ||
-                        "<!-- Configure settings to generate code -->"
+                    {(
+                      code?.custom ||
+                      "<!-- Configure settings to generate code -->"
+                    )
+                      .split("\n")
+                      .filter(
+                        (l) =>
+                          !l.trim().startsWith("data:") &&
+                          !l.includes("base64,"),
                       )
-                        .split("\n")
-                        .filter(
-                          (l) =>
-                            !l.trim().startsWith("data:") &&
-                            !l.includes("base64,"),
-                        )
-                        .join("\n")}
-                    </pre>
-                  </div>
-                )}
+                      .join("\n")}
+                  </pre>
+                </div>
               </div>
             </div>
           )}
@@ -598,7 +485,7 @@ export default function App() {
               minHeight: 0,
             }}
           >
-            <CodePanel code={activeCode} platform={platform} />
+            <CodePanel code={code} platform={platform} />
           </div>
         )}
       </div>

@@ -1,0 +1,23 @@
+// tools/TextMarquee/settings.js
+export const DEFAULT_TEXT_SETTINGS = {
+  text: "We help brands grow · Trusted by 500+ companies · Award-winning design · ",
+  direction: "left",
+  speed: "Medium",
+  customSpeed: 40,
+  fontSize: 18,
+  fontFamily: "Inter",
+  fontWeight: "400",
+  textColor: "#1a1a18",
+  bgColor: "#ffffff",
+  letterSpacing: 0,
+  verticalPadding: 20,
+  separator: "·",
+  separatorColor: "#aaaaaa",
+  fadeEdges: true,
+  pauseOnHover: false,
+  googleFont: true,
+  customFontName: "",
+  customFontData: "",
+  customFontExt: "",
+  platform: "Unbounce",
+};
