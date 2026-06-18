@@ -16,10 +16,10 @@ import { DEFAULT_FONTS, WEIGHTS, ALIGNS } from "../../shared/constants";
 const LAYOUTS = [
   { id: "card-grid", label: "Card Grid" },
   { id: "carousel", label: "Carousel" },
-  { id: "h-scroll", label: "H-Scroll" },
-  { id: "single-quote", label: "Single Quote" },
-  { id: "list", label: "List Feed" },
-  { id: "inline-avatar", label: "Inline Avatar" },
+  // { id: "h-scroll", label: "H-Scroll" },
+  // { id: "single-quote", label: "Single Quote" },
+  // { id: "list", label: "List Feed" },
+  // { id: "inline-avatar", label: "Inline Avatar" },
 ];
 const NAV_STYLES = [
   { id: "sides", label: "Sides" },
@@ -52,7 +52,7 @@ async function uploadAvatarToSupabase(file) {
     const ext = file.name.split(".").pop();
     const fileName = `avatar-${Date.now()}.${ext}`;
     const res = await fetch(
-      `${supabaseUrl}/storage/v1/object/avatars/${fileName}`,
+      `${supabaseUrl}/storage/v1/object/logos/${fileName}`,
       {
         method: "POST",
         headers: {
@@ -65,7 +65,7 @@ async function uploadAvatarToSupabase(file) {
       },
     );
     if (!res.ok) return null;
-    return `${supabaseUrl}/storage/v1/object/public/avatars/${fileName}`;
+    return `${supabaseUrl}/storage/v1/object/public/logos/${fileName}`;
   } catch (e) {
     console.error("Avatar upload failed:", e);
     return null;
